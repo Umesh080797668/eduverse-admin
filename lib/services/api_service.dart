@@ -22,7 +22,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/admin/login'),
+      Uri.parse('$baseUrl/api/admin/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -38,7 +38,7 @@ class ApiService {
   static Future<List<dynamic>> getTeachers() async {
     final token = await getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/teachers'),
+      Uri.parse('$baseUrl/api/teachers'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -51,7 +51,7 @@ class ApiService {
   static Future<List<dynamic>> getStudentsForTeacher(String teacherId) async {
     final token = await getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/teachers/$teacherId/students'),
+      Uri.parse('$baseUrl/api/teachers/$teacherId/students'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -64,7 +64,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getEarningsForTeacher(String teacherId) async {
     final token = await getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/teachers/$teacherId/earnings'),
+      Uri.parse('$baseUrl/api/teachers/$teacherId/earnings'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -77,7 +77,7 @@ class ApiService {
   static Future<void> activateTeacher(String teacherId, bool activate) async {
     final token = await getToken();
     final response = await http.post(
-      Uri.parse('$baseUrl/teachers/$teacherId/${activate ? 'activate' : 'deactivate'}'),
+      Uri.parse('$baseUrl/api/teachers/$teacherId/${activate ? 'activate' : 'deactivate'}'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
@@ -89,7 +89,7 @@ class ApiService {
   static Future<List<dynamic>> getSuperAdminTeachers() async {
     final token = await getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/super-admin/teachers'),
+      Uri.parse('$baseUrl/api/super-admin/teachers'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -103,7 +103,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getSuperAdminStats() async {
     final token = await getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/super-admin/stats'),
+      Uri.parse('$baseUrl/api/super-admin/stats'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -116,7 +116,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getStudentsForTeacherSuperAdmin(String teacherId) async {
     final token = await getToken();
     final response = await http.get(
-      Uri.parse('$baseUrl/super-admin/teachers/$teacherId/students'),
+      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/students'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -129,7 +129,7 @@ class ApiService {
   static Future<void> toggleTeacherStatus(String teacherId, String status) async {
     final token = await getToken();
     final response = await http.put(
-      Uri.parse('$baseUrl/super-admin/teachers/$teacherId/status'),
+      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/status'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json'
