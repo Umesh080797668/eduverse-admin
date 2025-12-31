@@ -184,6 +184,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => Navigator.of(context).pushNamed('/teachers'),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.report_problem, color: Colors.white),
+                    ),
+                    title: const Text(
+                      'Problem Reports',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'View problem reports from teachers',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () => Navigator.of(context).pushNamed('/problem-reports'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.green,
+                      child: const Icon(Icons.payment, color: Colors.white),
+                    ),
+                    title: const Text(
+                      'Payment Proofs',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'Review payment proofs and activate accounts',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () => Navigator.of(context).pushNamed('/payment-proofs'),
+                  ),
+                ),
               ],
             ),
           );

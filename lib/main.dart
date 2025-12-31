@@ -6,6 +6,8 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/teachers_screen.dart';
+import 'screens/problem_reports_screen.dart';
+import 'screens/payment_proofs_screen.dart';
 
 void main() {
   runApp(
@@ -35,6 +37,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/teachers': (context) => const TeachersScreen(),
+        '/problem-reports': (context) => const ProblemReportsScreen(),
+        '/payment-proofs': (context) => const PaymentProofsScreen(),
       },
     );
   }

@@ -161,4 +161,56 @@ class ApiService {
       throw Exception('Failed to load monthly earnings');
     }
   }
+
+  static Future<List<dynamic>> getProblemReports() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/reports/problems'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load problem reports');
+    }
+  }
+
+  static Future<List<dynamic>> getPaymentProofs() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/admin/payment-proofs'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load payment proofs');
+    }
+  }
+
+  static Future<Map<String, dynamic>> reviewPaymentProof(
+    String proofId,
+    String action,
+    String adminEmail,
+    String? notes,
+  ) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/admin/payment-proofs/$proofId/review'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'action': action,
+        'adminEmail': adminEmail,
+        'notes': notes,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to review payment proof');
+    }
+  }
 }
