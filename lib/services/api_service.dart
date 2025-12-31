@@ -31,7 +31,14 @@ class ApiService {
       await setToken(data['token']);
       return data;
     } else {
-      throw Exception('Login failed');
+      String errorMessage = 'Login failed';
+      try {
+        final errorData = jsonDecode(response.body);
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        }
+      } catch (_) {}
+      throw Exception(errorMessage);
     }
   }
 
@@ -138,6 +145,20 @@ class ApiService {
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to update teacher status');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getMonthlyEarningsForTeacher(String teacherId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/super-admin/reports/monthly-earnings-by-class?teacherId=$teacherId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List;
+      return data.map((item) => item as Map<String, dynamic>).toList();
+    } else {
+      throw Exception('Failed to load monthly earnings');
     }
   }
 }

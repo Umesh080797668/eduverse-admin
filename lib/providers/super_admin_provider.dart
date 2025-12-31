@@ -85,4 +85,25 @@ class SuperAdminProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<List<Map<String, dynamic>>> getMonthlyEarningsForTeacher(String teacherId) async {
+    try {
+      return await ApiService.getMonthlyEarningsForTeacher(teacherId);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      // Return empty list instead of throwing to handle gracefully
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> getEarningsForTeacher(String teacherId) async {
+    try {
+      return await ApiService.getEarningsForTeacher(teacherId);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
 }
