@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class ProblemReportsScreen extends StatefulWidget {
   const ProblemReportsScreen({super.key});
@@ -12,11 +14,46 @@ class _ProblemReportsScreenState extends State<ProblemReportsScreen> {
   List<dynamic> _reports = [];
   bool _isLoading = true;
   String? _error;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadReports();
+    // Start polling for real-time problem report updates
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _loadReportsSilently();
+    });
+  }
+
+  Future<void> _loadReportsSilently() async {
+    try {
+      final reports = await ApiService.getProblemReports();
+      final previousCount = _reports.length;
+      if (mounted && reports.length != previousCount) {
+        final newReportsCount = reports.length - previousCount;
+        if (newReportsCount > 0) {
+          // Show notification for new reports
+          await NotificationService().showProblemReportNotification(newReportsCount);
+        }
+        setState(() {
+          _reports = reports;
+        });
+      }
+    } catch (e) {
+      // Silently handle polling errors
+      print('Problem reports polling error: $e');
+    }
   }
 
   Future<void> _loadReports() async {

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
+import '../services/notification_service.dart';
 
 class PaymentProofsScreen extends StatefulWidget {
   const PaymentProofsScreen({super.key});
@@ -14,11 +16,46 @@ class _PaymentProofsScreenState extends State<PaymentProofsScreen> {
   List<dynamic> _paymentProofs = [];
   bool _isLoading = true;
   String? _error;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadPaymentProofs();
+    // Start polling for real-time payment proof updates
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _loadPaymentProofsSilently();
+    });
+  }
+
+  Future<void> _loadPaymentProofsSilently() async {
+    try {
+      final proofs = await ApiService.getPaymentProofs();
+      final previousCount = _paymentProofs.length;
+      if (mounted && proofs.length != previousCount) {
+        final newProofsCount = proofs.length - previousCount;
+        if (newProofsCount > 0) {
+          // Show notification for new payment proofs
+          await NotificationService().showPaymentProofNotification(newProofsCount);
+        }
+        setState(() {
+          _paymentProofs = proofs;
+        });
+      }
+    } catch (e) {
+      // Silently handle polling errors
+      print('Payment proofs polling error: $e');
+    }
   }
 
   Future<void> _loadPaymentProofs() async {

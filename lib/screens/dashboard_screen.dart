@@ -15,9 +15,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SuperAdminProvider>().loadStats();
-      context.read<SuperAdminProvider>().loadTeachers();
+      final provider = context.read<SuperAdminProvider>();
+      provider.loadStats();
+      provider.loadTeachers();
+      provider.loadProblemReportsCount();
+      provider.loadPaymentProofsCount();
+      // Start polling for real-time updates
+      provider.startStatsPolling(intervalSeconds: 30); // Poll stats every 30 seconds
+      provider.startTeachersPolling(intervalSeconds: 60); // Poll teachers every 60 seconds
+      provider.startCountsPolling(intervalSeconds: 60); // Poll counts every 60 seconds
     });
+  }
+
+  @override
+  void dispose() {
+    // Stop polling when screen is disposed
+    final provider = context.read<SuperAdminProvider>();
+    provider.stopStatsPolling();
+    provider.stopTeachersPolling();
+    provider.stopCountsPolling();
+    super.dispose();
   }
 
   @override
@@ -62,6 +79,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: () {
                       provider.loadStats();
                       provider.loadTeachers();
+                      provider.loadProblemReportsCount();
+                      provider.loadPaymentProofsCount();
                     },
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry'),
@@ -196,16 +215,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       backgroundColor: Colors.red,
                       child: const Icon(Icons.report_problem, color: Colors.white),
                     ),
-                    title: const Text(
-                      'Problem Reports',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    title: Row(
+                      children: [
+                        const Text(
+                          'Problem Reports',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        if (provider.newProblemReportsCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              provider.newProblemReportsCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     subtitle: const Text(
                       'View problem reports from teachers',
                       style: TextStyle(color: Colors.grey),
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () => Navigator.of(context).pushNamed('/problem-reports'),
+                    onTap: () async {
+                      await provider.markProblemReportsAsSeen();
+                      if (mounted) {
+                        Navigator.of(context).pushNamed('/problem-reports');
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -220,16 +266,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       backgroundColor: Colors.green,
                       child: const Icon(Icons.payment, color: Colors.white),
                     ),
-                    title: const Text(
-                      'Payment Proofs',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    title: Row(
+                      children: [
+                        const Text(
+                          'Payment Proofs',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        if (provider.newPaymentProofsCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              provider.newPaymentProofsCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     subtitle: const Text(
                       'Review payment proofs and activate accounts',
                       style: TextStyle(color: Colors.grey),
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () => Navigator.of(context).pushNamed('/payment-proofs'),
+                    onTap: () async {
+                      await provider.markPaymentProofsAsSeen();
+                      if (mounted) {
+                        Navigator.of(context).pushNamed('/payment-proofs');
+                      }
+                    },
                   ),
                 ),
               ],

@@ -8,8 +8,14 @@ import 'screens/dashboard_screen.dart';
 import 'screens/teachers_screen.dart';
 import 'screens/problem_reports_screen.dart';
 import 'screens/payment_proofs_screen.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize notification service
+  await NotificationService().initialize();
+  
   runApp(
     MultiProvider(
       providers: [

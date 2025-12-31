@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/teacher.dart';
 import '../models/student.dart';
@@ -8,11 +10,24 @@ class SuperAdminProvider with ChangeNotifier {
   Map<String, dynamic>? _stats;
   bool _isLoading = false;
   String? _error;
+  Timer? _statsPollingTimer;
+  Timer? _teachersPollingTimer;
+  Timer? _countsPollingTimer;
+  bool _isPollingStats = false;
+  bool _isPollingTeachers = false;
+  bool _isPollingCounts = false;
+  int _newProblemReportsCount = 0;
+  int _newPaymentProofsCount = 0;
 
   List<Teacher> get teachers => _teachers;
   Map<String, dynamic>? get stats => _stats;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isPollingStats => _isPollingStats;
+  bool get isPollingTeachers => _isPollingTeachers;
+  bool get isPollingCounts => _isPollingCounts;
+  int get newProblemReportsCount => _newProblemReportsCount;
+  int get newPaymentProofsCount => _newPaymentProofsCount;
 
   Future<void> loadTeachers() async {
     _isLoading = true;
@@ -30,6 +45,46 @@ class SuperAdminProvider with ChangeNotifier {
     }
   }
 
+  void startTeachersPolling({int intervalSeconds = 60}) {
+    if (_isPollingTeachers) return; // Already polling
+
+    _isPollingTeachers = true;
+    _teachersPollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
+      try {
+        final data = await ApiService.getSuperAdminTeachers();
+        final newTeachers = data.map((json) => Teacher.fromJson(json)).toList();
+
+        // Check if teachers data has changed
+        bool hasChanged = newTeachers.length != _teachers.length;
+        if (!hasChanged) {
+          for (int i = 0; i < newTeachers.length; i++) {
+            if (newTeachers[i].status != _teachers[i].status ||
+                newTeachers[i].totalEarnings != _teachers[i].totalEarnings) {
+              hasChanged = true;
+              break;
+            }
+          }
+        }
+
+        if (hasChanged) {
+          _teachers = newTeachers;
+          notifyListeners();
+        }
+      } catch (e) {
+        // Silently handle polling errors
+        print('Teachers polling error: $e');
+      }
+    });
+    print('Started teachers polling every $intervalSeconds seconds');
+  }
+
+  void stopTeachersPolling() {
+    _isPollingTeachers = false;
+    _teachersPollingTimer?.cancel();
+    _teachersPollingTimer = null;
+    print('Stopped teachers polling');
+  }
+
   Future<void> loadStats() async {
     try {
       _stats = await ApiService.getSuperAdminStats();
@@ -38,6 +93,55 @@ class SuperAdminProvider with ChangeNotifier {
       _error = e.toString();
       notifyListeners();
     }
+  }
+
+  void startStatsPolling({int intervalSeconds = 30}) {
+    if (_isPollingStats) return; // Already polling
+
+    _isPollingStats = true;
+    _statsPollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
+      try {
+        final newStats = await ApiService.getSuperAdminStats();
+        if (_stats != newStats) { // Only notify if data changed
+          _stats = newStats;
+          notifyListeners();
+        }
+      } catch (e) {
+        // Silently handle polling errors to avoid disrupting UI
+        print('Stats polling error: $e');
+      }
+    });
+    print('Started stats polling every $intervalSeconds seconds');
+  }
+
+  void stopStatsPolling() {
+    _isPollingStats = false;
+    _statsPollingTimer?.cancel();
+    _statsPollingTimer = null;
+    print('Stopped stats polling');
+  }
+
+  void startCountsPolling({int intervalSeconds = 60}) {
+    if (_isPollingCounts) return; // Already polling
+
+    _isPollingCounts = true;
+    _countsPollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
+      try {
+        await loadProblemReportsCount();
+        await loadPaymentProofsCount();
+      } catch (e) {
+        // Silently handle polling errors
+        print('Counts polling error: $e');
+      }
+    });
+    print('Started counts polling every $intervalSeconds seconds');
+  }
+
+  void stopCountsPolling() {
+    _isPollingCounts = false;
+    _countsPollingTimer?.cancel();
+    _countsPollingTimer = null;
+    print('Stopped counts polling');
   }
 
   Future<void> toggleTeacherStatus(String teacherId, String currentStatus) async {
@@ -105,5 +209,51 @@ class SuperAdminProvider with ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+  }
+
+  Future<void> loadProblemReportsCount() async {
+    try {
+      final reports = await ApiService.getProblemReports();
+      final prefs = await SharedPreferences.getInstance();
+      final lastSeenCount = prefs.getInt('last_seen_problem_reports') ?? 0;
+      
+      _newProblemReportsCount = reports.length - lastSeenCount;
+      if (_newProblemReportsCount < 0) _newProblemReportsCount = 0;
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error loading problem reports count: $e');
+    }
+  }
+
+  Future<void> loadPaymentProofsCount() async {
+    try {
+      final proofs = await ApiService.getPaymentProofs();
+      final prefs = await SharedPreferences.getInstance();
+      final lastSeenCount = prefs.getInt('last_seen_payment_proofs') ?? 0;
+      
+      _newPaymentProofsCount = proofs.length - lastSeenCount;
+      if (_newPaymentProofsCount < 0) _newPaymentProofsCount = 0;
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error loading payment proofs count: $e');
+    }
+  }
+
+  Future<void> markProblemReportsAsSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final reports = await ApiService.getProblemReports();
+    await prefs.setInt('last_seen_problem_reports', reports.length);
+    _newProblemReportsCount = 0;
+    notifyListeners();
+  }
+
+  Future<void> markPaymentProofsAsSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final proofs = await ApiService.getPaymentProofs();
+    await prefs.setInt('last_seen_payment_proofs', proofs.length);
+    _newPaymentProofsCount = 0;
+    notifyListeners();
   }
 }

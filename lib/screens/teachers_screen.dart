@@ -20,12 +20,17 @@ class _TeachersScreenState extends State<TeachersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SuperAdminProvider>().loadTeachers();
+      final provider = context.read<SuperAdminProvider>();
+      provider.loadTeachers();
+      // Start polling for real-time teacher updates
+      provider.startTeachersPolling(intervalSeconds: 45); // Poll every 45 seconds
     });
   }
 
   @override
   void dispose() {
+    // Stop polling when screen is disposed
+    context.read<SuperAdminProvider>().stopTeachersPolling();
     _searchController.dispose();
     super.dispose();
   }
