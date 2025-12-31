@@ -16,11 +16,14 @@ class TeacherDetailsScreen extends StatefulWidget {
 class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
   List<Student> _students = [];
   bool _isLoading = true;
+  List<Map<String, dynamic>> _monthlyEarnings = [];
+  bool _earningsLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadMonthlyEarnings();
   }
 
   Future<void> _loadData() async {
@@ -42,6 +45,28 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load students: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _loadMonthlyEarnings() async {
+    if (mounted) {
+      setState(() => _earningsLoading = true);
+    }
+    final provider = context.read<SuperAdminProvider>();
+    try {
+      final earnings = await provider.getMonthlyEarningsForTeacher(widget.teacher.teacherId);
+      if (mounted) {
+        setState(() {
+          _monthlyEarnings = earnings;
+          _earningsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _earningsLoading = false);
+        // Don't show error snackbar for earnings as it's not critical
+        print('Failed to load monthly earnings: $e');
       }
     }
   }
@@ -158,34 +183,52 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                             'Total Earnings',
                             'LKR ${widget.teacher.totalEarnings.toStringAsFixed(2)}'
                           ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue[200]!),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  color: Colors.blue[700],
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Detailed monthly earnings breakdown is not currently available. This shows the total earnings accumulated by the teacher.',
-                                    style: TextStyle(
-                                      color: Colors.blue[700],
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Monthly Earnings by Class',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          if (_earningsLoading)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else if (_monthlyEarnings.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'No earnings data available for this teacher.',
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ..._monthlyEarnings.map((classData) => _buildClassEarningsCard(classData)),
                         ],
                       ),
                     ),
@@ -298,6 +341,141 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildClassEarningsCard(Map<String, dynamic> classData) {
+    final monthlyBreakdown = classData['monthlyBreakdown'] as List<dynamic>? ?? [];
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    classData['className'] ?? 'Unknown Class',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'LKR ${(classData['totalEarnings'] ?? 0).toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.people, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  '${classData['studentCount'] ?? 0} students',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.payment, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  '${classData['paymentCount'] ?? 0} payments',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            if (monthlyBreakdown.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Monthly Breakdown:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: monthlyBreakdown.map<Widget>((monthData) {
+                  final year = monthData['year'] ?? 0;
+                  final month = monthData['month'] ?? 0;
+                  final amount = monthData['amount'] ?? 0;
+                  final paymentCount = monthData['paymentCount'] ?? 0;
+                  
+                  final monthNames = [
+                    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                  ];
+                  final monthName = month >= 1 && month <= 12 ? monthNames[month - 1] : 'Unknown';
+                  
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$monthName $year',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          'LKR ${amount.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '$paymentCount payments',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
