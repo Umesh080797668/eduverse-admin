@@ -24,7 +24,17 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadData();
+    
+    // Check if user is logged in and has admin data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (!authProvider.isLoggedIn || authProvider.adminId == null) {
+        print('DEBUG: User not logged in or admin data missing, redirecting to login');
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+      _loadData();
+    });
   }
 
   @override
