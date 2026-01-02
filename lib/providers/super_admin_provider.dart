@@ -50,6 +50,8 @@ class SuperAdminProvider with ChangeNotifier {
 
     _isPollingTeachers = true;
     _teachersPollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
+      if (!_isPollingTeachers) return; // Check if polling should continue
+      
       try {
         final data = await ApiService.getSuperAdminTeachers();
         final newTeachers = data.map((json) => Teacher.fromJson(json)).toList();
@@ -66,7 +68,7 @@ class SuperAdminProvider with ChangeNotifier {
           }
         }
 
-        if (hasChanged) {
+        if (hasChanged && _isPollingTeachers) { // Only notify if still polling
           _teachers = newTeachers;
           notifyListeners();
         }
@@ -100,9 +102,11 @@ class SuperAdminProvider with ChangeNotifier {
 
     _isPollingStats = true;
     _statsPollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
+      if (!_isPollingStats) return; // Check if polling should continue
+      
       try {
         final newStats = await ApiService.getSuperAdminStats();
-        if (_stats != newStats) { // Only notify if data changed
+        if (_isPollingStats && _stats != newStats) { // Only notify if still polling and data changed
           _stats = newStats;
           notifyListeners();
         }
@@ -126,6 +130,8 @@ class SuperAdminProvider with ChangeNotifier {
 
     _isPollingCounts = true;
     _countsPollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
+      if (!_isPollingCounts) return; // Check if polling should continue
+      
       try {
         await loadProblemReportsCount();
         await loadPaymentProofsCount();
