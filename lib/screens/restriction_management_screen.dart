@@ -47,12 +47,15 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
     });
 
     try {
+      print('DEBUG: Loading teachers...');
       final teachers = await _restrictionService.getAllTeachers();
+      print('DEBUG: Teachers loaded successfully: ${teachers.length} teachers');
       setState(() {
         _teachers = teachers;
         _isLoadingTeachers = false;
       });
     } catch (e) {
+      print('DEBUG: Error loading teachers: $e');
       setState(() {
         _errorTeachers = e.toString();
         _isLoadingTeachers = false;
@@ -87,12 +90,17 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final adminId = authProvider.adminId;
+      print('DEBUG: AuthProvider adminId: $adminId');
+      print('DEBUG: AuthProvider adminData: ${authProvider.adminData}');
+      print('DEBUG: AuthProvider isLoggedIn: ${authProvider.isLoggedIn}');
 
       if (adminId == null) {
-        _showErrorDialog('Admin ID not found');
+        print('DEBUG: Admin ID is null, showing error dialog');
+        _showErrorDialog('Admin ID not found. Please log out and log back in.');
         return;
       }
 
+      print('DEBUG: Calling restrictTeacher with teacherId: $teacherId, adminId: $adminId, reason: $reason');
       await _restrictionService.restrictTeacher(
         teacherId: teacherId,
         adminId: adminId,
@@ -102,6 +110,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
       _showSuccessDialog('Teacher restricted successfully');
       _loadTeachers();
     } catch (e) {
+      print('DEBUG: Error restricting teacher: $e');
       _showErrorDialog('Failed to restrict teacher: $e');
     }
   }
@@ -128,7 +137,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
       final adminId = authProvider.adminId;
 
       if (adminId == null) {
-        _showErrorDialog('Admin ID not found');
+        _showErrorDialog('Admin ID not found. Please log out and log back in.');
         return;
       }
 
@@ -164,20 +173,22 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Reason',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Reason',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
               ),
-              maxLines: 3,
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -299,9 +310,11 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
           final id = teacher['_id'];
 
           return Card(
+            key: Key('teacher-card-${id}'),
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 2,
             child: ListTile(
+              key: Key('teacher-tile-${id}'),
               leading: CircleAvatar(
                 backgroundColor: isRestricted ? Colors.red : Colors.green,
                 child: Icon(
@@ -391,9 +404,11 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
           final className = classInfo != null ? classInfo['name'] ?? '' : '';
 
           return Card(
+            key: Key('student-card-${id}'),
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 2,
             child: ListTile(
+              key: Key('student-tile-${id}'),
               leading: CircleAvatar(
                 backgroundColor: isRestricted ? Colors.red : Colors.green,
                 child: Icon(

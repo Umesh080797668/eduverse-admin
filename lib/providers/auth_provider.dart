@@ -10,16 +10,22 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   Map<String, dynamic>? get adminData => _adminData;
   String? get adminEmail => _adminData?['email'];
-  String? get adminId => _adminData?['id'];
+  String? get adminId => _adminData?['id'] ?? _adminData?['_id'];
 
   Future<void> login(String email, String password) async {
     try {
+      print('DEBUG: AuthProvider - Attempting login for email: $email');
       final data = await ApiService.login(email, password);
+      print('DEBUG: AuthProvider - Login response data: $data');
       _token = data['token'];
       _adminData = data['user'];
+      print('DEBUG: AuthProvider - Admin data: $_adminData');
+      print('DEBUG: AuthProvider - Admin ID: $adminId');
+      print('DEBUG: AuthProvider - Admin email: ${data['user']?['email']}');
       _isLoggedIn = true;
       notifyListeners();
     } catch (e) {
+      print('DEBUG: AuthProvider - Login failed: $e');
       rethrow;
     }
   }
@@ -35,7 +41,21 @@ class AuthProvider with ChangeNotifier {
   Future<void> checkLoginStatus() async {
     _token = await ApiService.getToken();
     _isLoggedIn = _token != null;
-    // TODO: You might want to fetch admin data again if token exists
+    
+    // Fetch admin data if token exists
+    if (_isLoggedIn) {
+      try {
+        _adminData = await ApiService.getAdminProfile();
+        print('DEBUG: AuthProvider - Restored admin data: $_adminData');
+      } catch (e) {
+        print('DEBUG: AuthProvider - Failed to fetch admin data: $e');
+        // If we can't fetch admin data, consider the user not logged in
+        _isLoggedIn = false;
+        _token = null;
+        _adminData = null;
+      }
+    }
+    
     notifyListeners();
   }
 }

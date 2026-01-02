@@ -180,7 +180,9 @@ class SuperAdminProvider with ChangeNotifier {
 
   Future<void> setTeacherSubscriptionFree(String teacherId) async {
     try {
+      print('DEBUG: SuperAdminProvider - Setting teacher subscription free for teacherId: $teacherId');
       await ApiService.setTeacherSubscriptionFree(teacherId);
+      print('DEBUG: SuperAdminProvider - Successfully set teacher subscription free');
       // Update local state to reflect free subscription
       final teacherIndex = _teachers.indexWhere((t) => t.id == teacherId);
       if (teacherIndex != -1) {
@@ -205,6 +207,7 @@ class SuperAdminProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      print('DEBUG: SuperAdminProvider - Error setting teacher subscription free: $e');
       _error = e.toString();
       notifyListeners();
       rethrow;

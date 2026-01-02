@@ -19,13 +19,18 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
+    print('DEBUG: ApiService - Login request for email: $email');
     final response = await http.post(
       Uri.parse('$baseUrl/api/admin/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
+    print('DEBUG: ApiService - Login response status: ${response.statusCode}');
+    print('DEBUG: ApiService - Login response body: ${response.body}');
+    
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      print('DEBUG: ApiService - Parsed login data: $data');
       await setToken(data['token']);
       return data;
     } else {
@@ -36,6 +41,7 @@ class ApiService {
           errorMessage = errorData['message'];
         }
       } catch (_) {}
+      print('DEBUG: ApiService - Login error: $errorMessage');
       throw Exception(errorMessage);
     }
   }
@@ -92,15 +98,34 @@ class ApiService {
 
   // Super Admin Methods
   static Future<List<dynamic>> getSuperAdminTeachers() async {
+    print('DEBUG: ApiService - getSuperAdminTeachers called');
     final token = await getToken();
     final response = await http.get(
       Uri.parse('$baseUrl/api/super-admin/teachers'),
       headers: {'Authorization': 'Bearer $token'},
     );
+    print('DEBUG: ApiService - getSuperAdminTeachers response status: ${response.statusCode}');
+    print('DEBUG: ApiService - getSuperAdminTeachers response body: ${response.body}');
+    
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return data['teachers'];
+      print('DEBUG: ApiService - getSuperAdminTeachers parsed data: $data');
+      print('DEBUG: ApiService - getSuperAdminTeachers data type: ${data.runtimeType}');
+      if (data is Map<String, dynamic>) {
+        print('DEBUG: ApiService - getSuperAdminTeachers data keys: ${data.keys.toList()}');
+        if (data.containsKey('teachers')) {
+          print('DEBUG: ApiService - getSuperAdminTeachers returning data["teachers"]: ${data['teachers']}');
+          return data['teachers'];
+        } else {
+          print('DEBUG: ApiService - getSuperAdminTeachers no "teachers" key found');
+          throw Exception('Unexpected response format: missing "teachers" key');
+        }
+      } else {
+        print('DEBUG: ApiService - getSuperAdminTeachers data is not a Map');
+        throw Exception('Unexpected response format');
+      }
     } else {
+      print('DEBUG: ApiService - getSuperAdminTeachers failed: ${response.statusCode}');
       throw Exception('Failed to load teachers');
     }
   }
@@ -226,15 +251,25 @@ class ApiService {
   }
 
   static Future<void> setTeacherSubscriptionFree(String teacherId) async {
+    print('DEBUG: ApiService - Setting teacher subscription free for teacherId: $teacherId');
     final token = await getToken();
+    print('DEBUG: ApiService - Token present: ${token != null}');
+    final url = '$baseUrl/api/super-admin/teachers/$teacherId/set-free';
+    print('DEBUG: ApiService - Request URL: $url');
+    
     final response = await http.post(
-      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/set-free'),
+      Uri.parse(url),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
     );
+    
+    print('DEBUG: ApiService - Response status: ${response.statusCode}');
+    print('DEBUG: ApiService - Response body: ${response.body}');
+    
     if (response.statusCode != 200) {
+      print('DEBUG: ApiService - Failed to set teacher subscription free: ${response.statusCode}');
       throw Exception('Failed to set teacher subscription free');
     }
   }
@@ -243,11 +278,13 @@ class ApiService {
     bool isLifetime = true,
     int? freeDays,
   }) async {
+    print('DEBUG: ApiService - Setting teacher subscription free with options for teacherId: $teacherId, isLifetime: $isLifetime, freeDays: $freeDays');
     final token = await getToken();
     final body = {
       'isLifetime': isLifetime,
       if (!isLifetime && freeDays != null) 'freeDays': freeDays,
     };
+    print('DEBUG: ApiService - Request body: $body');
 
     final response = await http.post(
       Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/set-free-options'),
@@ -257,8 +294,26 @@ class ApiService {
       },
       body: jsonEncode(body),
     );
+    
+    print('DEBUG: ApiService - Response status: ${response.statusCode}');
+    print('DEBUG: ApiService - Response body: ${response.body}');
+    
     if (response.statusCode != 200) {
+      print('DEBUG: ApiService - Failed to set teacher subscription free with options: ${response.statusCode}');
       throw Exception('Failed to set teacher subscription free with options');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAdminProfile() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/admin/profile'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch admin profile');
     }
   }
 

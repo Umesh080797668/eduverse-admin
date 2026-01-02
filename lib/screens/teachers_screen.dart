@@ -36,6 +36,9 @@ class _TeachersScreenState extends State<TeachersScreen> {
   }
 
   Future<void> _toggleActivation(Teacher teacher) async {
+    // Stop polling to prevent overriding local changes
+    context.read<SuperAdminProvider>().stopTeachersPolling();
+
     try {
       await context.read<SuperAdminProvider>().toggleTeacherStatus(
         teacher.id,
@@ -58,6 +61,13 @@ class _TeachersScreenState extends State<TeachersScreen> {
           ),
         );
       }
+    } finally {
+      // Restart polling after a delay to allow server sync
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          context.read<SuperAdminProvider>().startTeachersPolling(intervalSeconds: 45);
+        }
+      });
     }
   }
 
