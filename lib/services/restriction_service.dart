@@ -1,15 +1,20 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_service.dart';
 
 class RestrictionService {
-  final String baseUrl = 'https://teacher-eight-chi.vercel.app'; // Update with your API URL
+  final String baseUrl = ApiService.baseUrl;
 
   /// Super Admin: Get all teachers
   Future<List<dynamic>> getAllTeachers() async {
     try {
+      final token = await ApiService.getToken();
       final response = await http.get(
-        Uri.parse('$baseUrl/super-admin/teachers'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/super-admin/teachers'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -26,9 +31,13 @@ class RestrictionService {
   /// Super Admin: Get all students
   Future<List<dynamic>> getAllStudents() async {
     try {
+      final token = await ApiService.getToken();
       final response = await http.get(
-        Uri.parse('$baseUrl/super-admin/students'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/super-admin/students'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -49,9 +58,13 @@ class RestrictionService {
     String? reason,
   }) async {
     try {
+      final token = await ApiService.getToken();
       final response = await http.post(
-        Uri.parse('$baseUrl/super-admin/restrict-teacher'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/super-admin/restrict-teacher'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: json.encode({
           'teacherId': teacherId,
           'adminId': adminId,
@@ -73,9 +86,13 @@ class RestrictionService {
   /// Super Admin: Unrestrict teacher
   Future<Map<String, dynamic>> unrestrictTeacher(String teacherId) async {
     try {
+      final token = await ApiService.getToken();
       final response = await http.post(
-        Uri.parse('$baseUrl/super-admin/unrestrict-teacher'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/super-admin/unrestrict-teacher'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: json.encode({
           'teacherId': teacherId,
         }),
@@ -99,9 +116,13 @@ class RestrictionService {
     String? reason,
   }) async {
     try {
+      final token = await ApiService.getToken();
       final response = await http.post(
-        Uri.parse('$baseUrl/super-admin/restrict-student'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/super-admin/restrict-student'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: json.encode({
           'studentId': studentId,
           'adminId': adminId,
@@ -123,9 +144,13 @@ class RestrictionService {
   /// Super Admin: Unrestrict student
   Future<Map<String, dynamic>> unrestrictStudent(String studentId) async {
     try {
+      final token = await ApiService.getToken();
       final response = await http.post(
-        Uri.parse('$baseUrl/super-admin/unrestrict-student'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/api/super-admin/unrestrict-student'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: json.encode({
           'studentId': studentId,
         }),
