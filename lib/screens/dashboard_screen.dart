@@ -48,6 +48,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              // Stop polling before logging out
+              final provider = context.read<SuperAdminProvider>();
+              provider.stopStatsPolling();
+              provider.stopTeachersPolling();
+              provider.stopCountsPolling();
+              
               await Provider.of<AuthProvider>(context, listen: false).logout();
               if (mounted) {
                 Navigator.of(context).pushReplacementNamed('/login');
