@@ -1,23 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
   static const String baseUrl = 'https://teacher-eight-chi.vercel.app'; // Updated to match backend port
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static Future<String?> getToken() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
+    return await _storage.read(key: 'token');
   }
 
   static Future<void> setToken(String token) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', token);
+    await _storage.write(key: 'token', value: token);
   }
 
   static Future<void> logout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    await _storage.delete(key: 'token');
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -175,6 +173,19 @@ class ApiService {
     }
   }
 
+  static Future<List<dynamic>> getFeatureRequests() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/reports/feature-requests'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load feature requests');
+    }
+  }
+
   static Future<List<dynamic>> getPaymentProofs() async {
     final token = await getToken();
     final response = await http.get(
@@ -211,6 +222,58 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to review payment proof');
+    }
+  }
+
+  static Future<void> setTeacherSubscriptionFree(String teacherId) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/set-free'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to set teacher subscription free');
+    }
+  }
+
+  static Future<void> setTeacherSubscriptionFreeWithOptions(String teacherId, {
+    bool isLifetime = true,
+    int? freeDays,
+  }) async {
+    final token = await getToken();
+    final body = {
+      'isLifetime': isLifetime,
+      if (!isLifetime && freeDays != null) 'freeDays': freeDays,
+    };
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/set-free-options'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to set teacher subscription free with options');
+    }
+  }
+
+  static Future<void> startTeacherSubscription(String teacherId, String subscriptionType) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/start-subscription'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'subscriptionType': subscriptionType}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to start teacher subscription');
     }
   }
 }

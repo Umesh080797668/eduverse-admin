@@ -71,6 +71,189 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
     }
   }
 
+  Future<void> _showSetFreeOptionsDialog() async {
+    bool isLifetime = true;
+    int? freeDays;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Set Subscription Free'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Choose the type of free subscription:'),
+              const SizedBox(height: 16),
+              RadioListTile<bool>(
+                title: const Text('Lifetime Free'),
+                subtitle: const Text('Teacher gets unlimited free access'),
+                value: true,
+                groupValue: isLifetime,
+                onChanged: (value) {
+                  setState(() => isLifetime = value ?? true);
+                },
+              ),
+              RadioListTile<bool>(
+                title: const Text('Time Limited Free'),
+                subtitle: const Text('Teacher gets free access for a specific period'),
+                value: false,
+                groupValue: isLifetime,
+                onChanged: (value) {
+                  setState(() => isLifetime = value ?? false);
+                },
+              ),
+              if (!isLifetime) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Number of Free Days',
+                    hintText: 'e.g., 30, 60, 90',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    freeDays = int.tryParse(value);
+                  },
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('Set Free'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      if (!isLifetime && (freeDays == null || freeDays! <= 0)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid number of days'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      try {
+        final provider = context.read<SuperAdminProvider>();
+        await provider.setTeacherSubscriptionFreeWithOptions(
+          widget.teacher.id,
+          isLifetime: isLifetime,
+          freeDays: freeDays,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isLifetime
+                  ? 'Subscription set to lifetime free successfully'
+                  : 'Subscription set to free for $freeDays days successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Navigate back to refresh the teacher list
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to set subscription free: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showStartSubscriptionDialog() async {
+    String selectedPlan = 'monthly';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Start Paid Subscription'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Choose the subscription plan:'),
+              const SizedBox(height: 16),
+              RadioListTile<String>(
+                title: const Text('Monthly Plan'),
+                subtitle: const Text('LKR 1,000 per month'),
+                value: 'monthly',
+                groupValue: selectedPlan,
+                onChanged: (value) {
+                  setState(() => selectedPlan = value ?? 'monthly');
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Yearly Plan'),
+                subtitle: const Text('LKR 8,000 per year (25% savings)'),
+                value: 'yearly',
+                groupValue: selectedPlan,
+                onChanged: (value) {
+                  setState(() => selectedPlan = value ?? 'yearly');
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              child: const Text('Start Subscription'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      try {
+        final provider = context.read<SuperAdminProvider>();
+        await provider.startTeacherSubscription(widget.teacher.id, selectedPlan);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Paid subscription ($selectedPlan) started successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Navigate back to refresh the teacher list
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to start subscription: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,6 +336,62 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                           _buildInfoRow('Students Count', widget.teacher.studentCount.toString()),
                           _buildInfoRow('Classes Count', widget.teacher.classCount.toString()),
                           _buildInfoRow('Joined', widget.teacher.createdAt.toString().split(' ')[0]),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Actions Section
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Actions',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Set Subscription Free Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showSetFreeOptionsDialog(),
+                              icon: const Icon(Icons.free_breakfast),
+                              label: const Text('Set Subscription Free'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Start Subscription Button (only show if currently free)
+                          if (widget.teacher.subscriptionType == 'free')
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showStartSubscriptionDialog(),
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Start Paid Subscription'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

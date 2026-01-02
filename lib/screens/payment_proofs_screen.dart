@@ -86,7 +86,7 @@ class _PaymentProofsScreenState extends State<PaymentProofsScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to ${action} payment proof: $e')),
+        SnackBar(content: Text('Failed to $action payment proof: $e')),
       );
     }
   }

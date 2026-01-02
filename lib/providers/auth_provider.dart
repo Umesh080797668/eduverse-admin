@@ -19,7 +19,7 @@ class AuthProvider with ChangeNotifier {
       _isLoggedIn = true;
       notifyListeners();
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 

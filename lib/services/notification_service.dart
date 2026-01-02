@@ -120,6 +120,19 @@ class NotificationService {
     );
   }
 
+  Future<void> showFeatureRequestNotification(int newRequestsCount) async {
+    if (newRequestsCount <= 0) return;
+
+    final title = 'New Feature Request${newRequestsCount > 1 ? 's' : ''}';
+    final body = 'You have $newRequestsCount new feature request${newRequestsCount > 1 ? 's' : ''} to review';
+
+    await showNotification(
+      title: title,
+      body: body,
+      id: 3, // Use ID 3 for feature requests
+    );
+  }
+
   /// Cancel a specific notification
   Future<void> cancelNotification(int id) async {
     await _flutterLocalNotificationsPlugin.cancel(id);

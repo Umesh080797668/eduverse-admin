@@ -178,6 +178,122 @@ class SuperAdminProvider with ChangeNotifier {
     }
   }
 
+  Future<void> setTeacherSubscriptionFree(String teacherId) async {
+    try {
+      await ApiService.setTeacherSubscriptionFree(teacherId);
+      // Update local state to reflect free subscription
+      final teacherIndex = _teachers.indexWhere((t) => t.id == teacherId);
+      if (teacherIndex != -1) {
+        _teachers[teacherIndex] = Teacher(
+          id: _teachers[teacherIndex].id,
+          teacherId: _teachers[teacherIndex].teacherId,
+          name: _teachers[teacherIndex].name,
+          email: _teachers[teacherIndex].email,
+          phone: _teachers[teacherIndex].phone,
+          status: _teachers[teacherIndex].status,
+          profilePicture: _teachers[teacherIndex].profilePicture,
+          companyIds: _teachers[teacherIndex].companyIds,
+          subscriptionType: 'free', // Set to free
+          subscriptionStartDate: DateTime.now(), // Set current date as start
+          subscriptionExpiryDate: DateTime.now().add(const Duration(days: 365 * 100)), // Set far future date
+          totalEarnings: _teachers[teacherIndex].totalEarnings,
+          studentCount: _teachers[teacherIndex].studentCount,
+          classCount: _teachers[teacherIndex].classCount,
+          createdAt: _teachers[teacherIndex].createdAt,
+          updatedAt: _teachers[teacherIndex].updatedAt,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> setTeacherSubscriptionFreeWithOptions(String teacherId, {
+    bool isLifetime = true,
+    int? freeDays,
+  }) async {
+    try {
+      await ApiService.setTeacherSubscriptionFreeWithOptions(
+        teacherId,
+        isLifetime: isLifetime,
+        freeDays: freeDays,
+      );
+
+      // Update local state to reflect free subscription
+      final teacherIndex = _teachers.indexWhere((t) => t.id == teacherId);
+      if (teacherIndex != -1) {
+        final expiryDate = isLifetime
+            ? DateTime.now().add(const Duration(days: 365 * 100)) // Far future for lifetime
+            : DateTime.now().add(Duration(days: freeDays ?? 30)); // Default 30 days if not specified
+
+        _teachers[teacherIndex] = Teacher(
+          id: _teachers[teacherIndex].id,
+          teacherId: _teachers[teacherIndex].teacherId,
+          name: _teachers[teacherIndex].name,
+          email: _teachers[teacherIndex].email,
+          phone: _teachers[teacherIndex].phone,
+          status: _teachers[teacherIndex].status,
+          profilePicture: _teachers[teacherIndex].profilePicture,
+          companyIds: _teachers[teacherIndex].companyIds,
+          subscriptionType: 'free',
+          subscriptionStartDate: DateTime.now(),
+          subscriptionExpiryDate: expiryDate,
+          totalEarnings: _teachers[teacherIndex].totalEarnings,
+          studentCount: _teachers[teacherIndex].studentCount,
+          classCount: _teachers[teacherIndex].classCount,
+          createdAt: _teachers[teacherIndex].createdAt,
+          updatedAt: _teachers[teacherIndex].updatedAt,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> startTeacherSubscription(String teacherId, String subscriptionType) async {
+    try {
+      await ApiService.startTeacherSubscription(teacherId, subscriptionType);
+
+      // Update local state to reflect paid subscription
+      final teacherIndex = _teachers.indexWhere((t) => t.id == teacherId);
+      if (teacherIndex != -1) {
+        final expiryDate = subscriptionType == 'yearly'
+            ? DateTime.now().add(const Duration(days: 365))
+            : DateTime.now().add(const Duration(days: 30));
+
+        _teachers[teacherIndex] = Teacher(
+          id: _teachers[teacherIndex].id,
+          teacherId: _teachers[teacherIndex].teacherId,
+          name: _teachers[teacherIndex].name,
+          email: _teachers[teacherIndex].email,
+          phone: _teachers[teacherIndex].phone,
+          status: _teachers[teacherIndex].status,
+          profilePicture: _teachers[teacherIndex].profilePicture,
+          companyIds: _teachers[teacherIndex].companyIds,
+          subscriptionType: subscriptionType,
+          subscriptionStartDate: DateTime.now(),
+          subscriptionExpiryDate: expiryDate,
+          totalEarnings: _teachers[teacherIndex].totalEarnings,
+          studentCount: _teachers[teacherIndex].studentCount,
+          classCount: _teachers[teacherIndex].classCount,
+          createdAt: _teachers[teacherIndex].createdAt,
+          updatedAt: _teachers[teacherIndex].updatedAt,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<List<Student>> getStudentsForTeacher(String teacherId) async {
     try {
       final data = await ApiService.getStudentsForTeacherSuperAdmin(teacherId);
