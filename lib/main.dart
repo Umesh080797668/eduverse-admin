@@ -8,6 +8,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/teachers_screen.dart';
 import 'screens/problem_reports_screen.dart';
 import 'screens/payment_proofs_screen.dart';
+import 'screens/restriction_management_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/teachers': (context) => const TeachersScreen(),
         '/problem-reports': (context) => const ProblemReportsScreen(),
         '/payment-proofs': (context) => const PaymentProofsScreen(),
+        '/restriction-management': (context) => const RestrictionManagementScreen(),
       },
     );
   }

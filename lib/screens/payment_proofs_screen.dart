@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../services/notification_service.dart';
@@ -65,6 +66,11 @@ class _PaymentProofsScreenState extends State<PaymentProofsScreen> {
         _error = null;
       });
       final proofs = await ApiService.getPaymentProofs();
+      
+      // Update shared preferences with current count
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_seen_payment_proofs', proofs.length);
+      
       setState(() {
         _paymentProofs = proofs;
         _isLoading = false;

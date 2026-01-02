@@ -213,6 +213,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     contentPadding: const EdgeInsets.all(16),
                     leading: CircleAvatar(
                       backgroundColor: Colors.red,
+                      child: const Icon(Icons.block, color: Colors.white),
+                    ),
+                    title: const Text(
+                      'Restriction Management',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'Manage teacher and student restrictions',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () => Navigator.of(context).pushNamed('/restriction-management'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.red,
                       child: const Icon(Icons.report_problem, color: Colors.white),
                     ),
                     title: Row(
@@ -246,11 +270,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () async {
-                      await provider.markProblemReportsAsSeen();
-                      if (mounted) {
-                        Navigator.of(context).pushNamed('/problem-reports');
-                      }
+                    onTap: () {
+                      provider.markProblemReportsAsSeen(); // Don't await
+                      Navigator.of(context).pushNamed('/problem-reports');
                     },
                   ),
                 ),
@@ -297,11 +319,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () async {
-                      await provider.markPaymentProofsAsSeen();
-                      if (mounted) {
-                        Navigator.of(context).pushNamed('/payment-proofs');
-                      }
+                    onTap: () {
+                      provider.markPaymentProofsAsSeen(); // Don't await
+                      Navigator.of(context).pushNamed('/payment-proofs');
                     },
                   ),
                 ),

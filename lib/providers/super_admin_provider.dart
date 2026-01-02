@@ -358,17 +358,11 @@ class SuperAdminProvider with ChangeNotifier {
   }
 
   Future<void> markProblemReportsAsSeen() async {
-    final prefs = await SharedPreferences.getInstance();
-    final reports = await ApiService.getProblemReports();
-    await prefs.setInt('last_seen_problem_reports', reports.length);
     _newProblemReportsCount = 0;
     notifyListeners();
   }
 
   Future<void> markPaymentProofsAsSeen() async {
-    final prefs = await SharedPreferences.getInstance();
-    final proofs = await ApiService.getPaymentProofs();
-    await prefs.setInt('last_seen_payment_proofs', proofs.length);
     _newPaymentProofsCount = 0;
     notifyListeners();
   }

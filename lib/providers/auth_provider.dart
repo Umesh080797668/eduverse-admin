@@ -10,6 +10,7 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   Map<String, dynamic>? get adminData => _adminData;
   String? get adminEmail => _adminData?['email'];
+  String? get adminId => _adminData?['id'];
 
   Future<void> login(String email, String password) async {
     try {

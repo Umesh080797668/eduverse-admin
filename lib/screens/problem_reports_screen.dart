@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 
@@ -81,6 +82,11 @@ class _ProblemReportsScreenState extends State<ProblemReportsScreen> with Single
       
       final problems = await ApiService.getProblemReports();
       final features = await ApiService.getFeatureRequests();
+      
+      // Update shared preferences with current counts
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_seen_problem_reports', problems.length);
+      await prefs.setInt('last_seen_feature_requests', features.length);
       
       setState(() {
         _problemReports = problems;
