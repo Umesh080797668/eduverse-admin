@@ -15,32 +15,33 @@ class _TeachersScreenState extends State<TeachersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _statusFilter = 'all'; // all, active, inactive
+  late SuperAdminProvider _provider;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<SuperAdminProvider>();
-      provider.loadTeachers();
+      _provider = context.read<SuperAdminProvider>();
+      _provider.loadTeachers();
       // Start polling for real-time teacher updates
-      provider.startTeachersPolling(intervalSeconds: 45); // Poll every 45 seconds
+      _provider.startTeachersPolling(intervalSeconds: 45); // Poll every 45 seconds
     });
   }
 
   @override
   void dispose() {
     // Stop polling when screen is disposed
-    context.read<SuperAdminProvider>().stopTeachersPolling();
+    _provider.stopTeachersPolling();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _toggleActivation(Teacher teacher) async {
     // Stop polling to prevent overriding local changes
-    context.read<SuperAdminProvider>().stopTeachersPolling();
+    _provider.stopTeachersPolling();
 
     try {
-      await context.read<SuperAdminProvider>().toggleTeacherStatus(
+      await _provider.toggleTeacherStatus(
         teacher.id,
         teacher.status,
       );
@@ -65,7 +66,7 @@ class _TeachersScreenState extends State<TeachersScreen> {
       // Restart polling after a delay to allow server sync
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
-          context.read<SuperAdminProvider>().startTeachersPolling(intervalSeconds: 45);
+          _provider.startTeachersPolling(intervalSeconds: 45);
         }
       });
     }

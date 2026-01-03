@@ -161,6 +161,7 @@ class _PaymentProofsScreenState extends State<PaymentProofsScreen> {
               Navigator.of(context).pop();
               _reviewPaymentProof(proof['_id'], 'approve', adminEmail);
             },
+            style: ElevatedButton.styleFrom(foregroundColor: Colors.white),
             child: const Text('Approve'),
           ),
         ],

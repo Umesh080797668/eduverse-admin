@@ -72,8 +72,24 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
   }
 
   Future<void> _showSetFreeOptionsDialog() async {
-    bool isLifetime = true;
+    // Check current subscription status
+    bool? isLifetime;
     int? freeDays;
+
+    if (widget.teacher.subscriptionType == 'free') {
+      // Check if it's lifetime (expiry > 50 years from now) or time-limited
+      final now = DateTime.now();
+      final fiftyYearsFromNow = now.add(const Duration(days: 365 * 50));
+      if (widget.teacher.subscriptionExpiryDate.isAfter(fiftyYearsFromNow)) {
+        isLifetime = true; // Lifetime free
+      } else {
+        isLifetime = false; // Time-limited free
+        // Calculate remaining days
+        final remainingDays = widget.teacher.subscriptionExpiryDate.difference(now).inDays;
+        freeDays = remainingDays > 0 ? remainingDays : 30; // Default to 30 if expired
+      }
+    }
+    // If not free, don't pre-select any option (isLifetime remains null)
 
     final result = await showDialog<bool>(
       context: context,
@@ -83,29 +99,32 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text('Current subscription: ${widget.teacher.subscriptionType.toUpperCase()}'),
+              const SizedBox(height: 8),
               const Text('Choose the type of free subscription:'),
               const SizedBox(height: 16),
-              RadioListTile<bool>(
+              RadioListTile<bool?>(
                 title: const Text('Lifetime Free'),
                 subtitle: const Text('Teacher gets unlimited free access'),
                 value: true,
                 groupValue: isLifetime,
                 onChanged: (value) {
-                  setState(() => isLifetime = value ?? true);
+                  setState(() => isLifetime = value);
                 },
               ),
-              RadioListTile<bool>(
+              RadioListTile<bool?>(
                 title: const Text('Time Limited Free'),
                 subtitle: const Text('Teacher gets free access for a specific period'),
                 value: false,
                 groupValue: isLifetime,
                 onChanged: (value) {
-                  setState(() => isLifetime = value ?? false);
+                  setState(() => isLifetime = value);
                 },
               ),
-              if (!isLifetime) ...[
+              if (isLifetime == false) ...[
                 const SizedBox(height: 16),
                 TextField(
+                  controller: TextEditingController(text: freeDays?.toString() ?? ''),
                   decoration: const InputDecoration(
                     labelText: 'Number of Free Days',
                     hintText: 'e.g., 30, 60, 90',
@@ -126,7 +145,10 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Set Free'),
             ),
           ],
@@ -135,7 +157,17 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
     );
 
     if (result == true) {
-      if (!isLifetime && (freeDays == null || freeDays! <= 0)) {
+      if (isLifetime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a free subscription option'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      if (!isLifetime! && (freeDays == null || freeDays! <= 0)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please enter a valid number of days'),
@@ -149,14 +181,14 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
         final provider = context.read<SuperAdminProvider>();
         await provider.setTeacherSubscriptionFreeWithOptions(
           widget.teacher.id,
-          isLifetime: isLifetime,
+          isLifetime: isLifetime!,
           freeDays: freeDays,
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(isLifetime
+              content: Text(isLifetime!
                   ? 'Subscription set to lifetime free successfully'
                   : 'Subscription set to free for $freeDays days successfully'),
               backgroundColor: Colors.green,
@@ -179,16 +211,19 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
   }
 
   Future<void> _showStartSubscriptionDialog() async {
-    String selectedPlan = 'monthly';
+    // Pre-select based on current subscription type
+    String selectedPlan = widget.teacher.subscriptionType == 'yearly' ? 'yearly' : 'monthly';
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Start Paid Subscription'),
+          title: const Text('Set Paid Subscription'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text('Current subscription: ${widget.teacher.subscriptionType.toUpperCase()}'),
+              const SizedBox(height: 8),
               const Text('Choose the subscription plan:'),
               const SizedBox(height: 16),
               RadioListTile<String>(
@@ -218,7 +253,10 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Start Subscription'),
             ),
           ],
@@ -377,21 +415,20 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Start Subscription Button (only show if currently free)
-                          if (widget.teacher.subscriptionType == 'free')
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () => _showStartSubscriptionDialog(),
-                                icon: const Icon(Icons.play_arrow),
-                                label: const Text('Start Paid Subscription'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
+                          // Start Subscription Button (always show)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showStartSubscriptionDialog(),
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Set Paid Subscription'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
+                          ),
                         ],
                       ),
                     ),

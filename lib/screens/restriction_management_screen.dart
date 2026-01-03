@@ -111,7 +111,9 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
 
       if (adminId == null) {
         print('DEBUG: Admin ID is null, showing error dialog');
-        _showErrorDialog('Admin ID not found. Please log out and log back in.');
+        if (mounted) {
+          _showErrorDialog('Admin ID not found. Please log out and log back in.');
+        }
         return;
       }
 
@@ -122,11 +124,17 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
         reason: reason,
       );
 
-      _showSuccessDialog('Teacher restricted successfully');
-      _loadTeachers();
+      if (mounted) {
+        _showSuccessDialog('Teacher restricted successfully');
+        // Add a small delay to ensure the database is updated
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _loadTeachers();
+      }
     } catch (e) {
       print('DEBUG: Error restricting teacher: $e');
-      _showErrorDialog('Failed to restrict teacher: $e');
+      if (mounted) {
+        _showErrorDialog('Failed to restrict teacher: $e');
+      }
     }
   }
 
@@ -136,10 +144,15 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
 
     try {
       await _restrictionService.unrestrictTeacher(teacherId);
-      _showSuccessDialog('Teacher unrestricted successfully');
-      _loadTeachers();
+      if (mounted) {
+        _showSuccessDialog('Teacher unrestricted successfully');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _loadTeachers();
+      }
     } catch (e) {
-      _showErrorDialog('Failed to unrestrict teacher: $e');
+      if (mounted) {
+        _showErrorDialog('Failed to unrestrict teacher: $e');
+      }
     }
   }
 
@@ -162,10 +175,15 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
         reason: reason,
       );
 
-      _showSuccessDialog('Student restricted successfully');
-      _loadStudents();
+      if (mounted) {
+        _showSuccessDialog('Student restricted successfully');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _loadStudents();
+      }
     } catch (e) {
-      _showErrorDialog('Failed to restrict student: $e');
+      if (mounted) {
+        _showErrorDialog('Failed to restrict student: $e');
+      }
     }
   }
 
@@ -175,50 +193,34 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
 
     try {
       await _restrictionService.unrestrictStudent(studentId);
-      _showSuccessDialog('Student unrestricted successfully');
-      _loadStudents();
+      if (mounted) {
+        _showSuccessDialog('Student unrestricted successfully');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _loadStudents();
+      }
     } catch (e) {
-      _showErrorDialog('Failed to unrestrict student: $e');
+      if (mounted) {
+        _showErrorDialog('Failed to unrestrict student: $e');
+      }
     }
   }
 
   Future<String?> _showReasonDialog(String title, String message) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
+    return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(message),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Reason',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Confirm'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => _ReasonDialogWidget(
+        title: title,
+        message: message,
       ),
     );
-    controller.dispose();
-    return result;
+  }
+
+  Widget _buildReasonDialogContent(String title, String message) {
+    return _ReasonDialogWidget(
+      title: title,
+      message: message,
+    );
   }
 
   Future<bool> _showConfirmDialog(String title, String message) async {
@@ -236,6 +238,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Confirm'),
           ),
@@ -268,6 +271,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
     return Scaffold(
       appBar: AppBar(
         title: const Text('Restriction Management'),
+        foregroundColor: Colors.black,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -300,6 +304,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadTeachers,
+              style: ElevatedButton.styleFrom(foregroundColor: Colors.white),
               child: const Text('Retry'),
             ),
           ],
@@ -344,17 +349,26 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(email),
+                  if (email.isNotEmpty) Text(email),
                   if (teacherId.isNotEmpty) Text('ID: $teacherId'),
-                  if (isRestricted && teacher['restrictionReason'] != null) ...[
+                  if (isRestricted) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      'Reason: ${teacher['restrictionReason']}',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontSize: 12,
+                    if (teacher['restrictionReason'] != null)
+                      Text(
+                        'Reason: ${teacher['restrictionReason']}',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 12,
+                        ),
+                      )
+                    else if (teacher['reason'] != null)
+                      Text(
+                        'Reason: ${teacher['reason']}',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
                   ],
                 ],
               ),
@@ -368,6 +382,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isRestricted ? Colors.green : Colors.red,
+                  foregroundColor: Colors.white,
                 ),
                 child: Text(isRestricted ? 'Unrestrict' : 'Restrict'),
               ),
@@ -392,6 +407,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadStudents,
+              style: ElevatedButton.styleFrom(foregroundColor: Colors.white),
               child: const Text('Retry'),
             ),
           ],
@@ -463,6 +479,7 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isRestricted ? Colors.green : Colors.red,
+                  foregroundColor: Colors.white,
                 ),
                 child: Text(isRestricted ? 'Unrestrict' : 'Restrict'),
               ),
@@ -470,6 +487,78 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
           );
         },
       ),
+    );
+  }
+}
+
+class _ReasonDialogWidget extends StatefulWidget {
+  final String title;
+  final String message;
+
+  const _ReasonDialogWidget({
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  State<_ReasonDialogWidget> createState() => _ReasonDialogWidgetState();
+}
+
+class _ReasonDialogWidgetState extends State<_ReasonDialogWidget> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.message),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            Navigator.of(context).pop(_controller.text);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.purple,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Confirm'),
+        ),
+      ],
     );
   }
 }

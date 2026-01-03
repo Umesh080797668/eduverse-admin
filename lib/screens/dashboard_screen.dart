@@ -11,29 +11,30 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  late SuperAdminProvider _provider;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<SuperAdminProvider>();
-      provider.loadStats();
-      provider.loadTeachers();
-      provider.loadProblemReportsCount();
-      provider.loadPaymentProofsCount();
+      _provider = context.read<SuperAdminProvider>();
+      _provider.loadStats();
+      _provider.loadTeachers();
+      _provider.loadProblemReportsCount();
+      _provider.loadPaymentProofsCount();
       // Start polling for real-time updates
-      provider.startStatsPolling(intervalSeconds: 30); // Poll stats every 30 seconds
-      provider.startTeachersPolling(intervalSeconds: 60); // Poll teachers every 60 seconds
-      provider.startCountsPolling(intervalSeconds: 60); // Poll counts every 60 seconds
+      _provider.startStatsPolling(intervalSeconds: 30); // Poll stats every 30 seconds
+      _provider.startTeachersPolling(intervalSeconds: 60); // Poll teachers every 60 seconds
+      _provider.startCountsPolling(intervalSeconds: 60); // Poll counts every 60 seconds
     });
   }
 
   @override
   void dispose() {
     // Stop polling when screen is disposed
-    final provider = context.read<SuperAdminProvider>();
-    provider.stopStatsPolling();
-    provider.stopTeachersPolling();
-    provider.stopCountsPolling();
+    _provider.stopStatsPolling();
+    _provider.stopTeachersPolling();
+    _provider.stopCountsPolling();
     super.dispose();
   }
 
