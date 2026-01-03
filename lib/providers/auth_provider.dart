@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
   bool _isLoggedIn = false;
   String? _token;
   Map<String, dynamic>? _adminData;
+  Timer? _statusCheckTimer;
 
   bool get isLoggedIn => _isLoggedIn;
   String? get token => _token;
@@ -23,6 +25,7 @@ class AuthProvider with ChangeNotifier {
       print('DEBUG: AuthProvider - Admin ID: $adminId');
       print('DEBUG: AuthProvider - Admin email: ${data['user']?['email']}');
       _isLoggedIn = true;
+      _startStatusChecking();
       notifyListeners();
     } catch (e) {
       print('DEBUG: AuthProvider - Login failed: $e');
@@ -31,6 +34,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    _stopStatusChecking();
     await ApiService.logout();
     _isLoggedIn = false;
     _token = null;
@@ -47,6 +51,7 @@ class AuthProvider with ChangeNotifier {
       try {
         _adminData = await ApiService.getAdminProfile();
         print('DEBUG: AuthProvider - Restored admin data: $_adminData');
+        _startStatusChecking();
       } catch (e) {
         print('DEBUG: AuthProvider - Failed to fetch admin data: $e');
         // If we can't fetch admin data, consider the user not logged in
@@ -57,5 +62,23 @@ class AuthProvider with ChangeNotifier {
     }
     
     notifyListeners();
+  }
+
+  void _startStatusChecking() {
+    _stopStatusChecking();
+    _statusCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (!_isLoggedIn) return;
+      try {
+        await ApiService.getAdminProfile();
+      } catch (e) {
+        print('DEBUG: AuthProvider - Admin status check failed: $e');
+        await logout();
+      }
+    });
+  }
+
+  void _stopStatusChecking() {
+    _statusCheckTimer?.cancel();
+    _statusCheckTimer = null;
   }
 }
