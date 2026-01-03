@@ -368,11 +368,27 @@ class SuperAdminProvider with ChangeNotifier {
 
   Future<void> markProblemReportsAsSeen() async {
     _newProblemReportsCount = 0;
+    // Update shared preferences with current count to persist the "seen" state
+    try {
+      final reports = await ApiService.getProblemReports();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_seen_problem_reports', reports.length);
+    } catch (e) {
+      print('Error updating last seen problem reports: $e');
+    }
     notifyListeners();
   }
 
   Future<void> markPaymentProofsAsSeen() async {
     _newPaymentProofsCount = 0;
+    // Update shared preferences with current count to persist the "seen" state
+    try {
+      final proofs = await ApiService.getPaymentProofs();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_seen_payment_proofs', proofs.length);
+    } catch (e) {
+      print('Error updating last seen payment proofs: $e');
+    }
     notifyListeners();
   }
 }
