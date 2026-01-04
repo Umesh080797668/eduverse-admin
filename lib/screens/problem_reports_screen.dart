@@ -186,6 +186,8 @@ class _ProblemReportsScreenState extends State<ProblemReportsScreen> with Single
       itemCount: _problemReports.length,
       itemBuilder: (context, index) {
         final report = _problemReports[index];
+        final images = report['images'] as List<dynamic>? ?? [];
+        
         return Card(
           elevation: 4,
           margin: const EdgeInsets.only(bottom: 16),
@@ -251,6 +253,101 @@ class _ProblemReportsScreenState extends State<ProblemReportsScreen> with Single
                     style: const TextStyle(fontSize: 14),
                   ),
                 ),
+                // Display attached images if any
+                if (images.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.image, size: 18, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Attached Images (${images.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: images.length,
+                      itemBuilder: (context, imgIndex) {
+                        final image = images[imgIndex];
+                        final imageUrl = image['url'] ?? '';
+                        
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              // Show full image in a dialog
+                              showDialog(
+                                context: context,
+                                builder: (context) => Dialog(
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.pop(context),
+                                    child: Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.contain,
+                                      loadingBuilder: (context, child, progress) {
+                                        if (progress == null) return child;
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return const Center(
+                                          child: Text('Failed to load image'),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                imageUrl,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: Colors.grey.shade200,
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(Icons.broken_image, size: 32),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
