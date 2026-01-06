@@ -535,13 +535,29 @@ class _ProblemReportsScreenState extends State<ProblemReportsScreen> with Single
     );
   }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return '';
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return '';
     try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      // Handle the new date object format from backend
+      if (dateValue is Map) {
+        // If it's an object with dateString, use that
+        if (dateValue['dateString'] != null) {
+          return dateValue['dateString'];
+        }
+        // If it has isoString, parse it
+        if (dateValue['isoString'] != null) {
+          final date = DateTime.parse(dateValue['isoString']);
+          return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+        }
+      }
+      // Fallback: if it's a string, parse it
+      if (dateValue is String) {
+        final date = DateTime.parse(dateValue);
+        return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+      }
+      return dateValue.toString();
     } catch (e) {
-      return dateString;
+      return dateValue.toString();
     }
   }
 }

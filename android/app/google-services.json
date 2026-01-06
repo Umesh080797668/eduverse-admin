@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "339571624728",
+    "project_id": "eduverse-admin-app",
+    "storage_bucket": "eduverse-admin-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339571624728:android:0e5fe1a6c8f11850fe6c6d",
+        "android_client_info": {
+          "package_name": "com.example.admin_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpYM5pgPY-XNc77rd0jSLnb0cq_Lp2aCg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

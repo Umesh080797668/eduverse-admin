@@ -293,27 +293,83 @@ class _PaymentProofsScreenState extends State<PaymentProofsScreen> {
                                       ),
                                     ],
                                   )
+                                else if (proof['status'] == 'approved')
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.green.shade300,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green.shade700,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Payment Approved',
+                                            style: TextStyle(
+                                              color: Colors.green.shade700,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
                                 else
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: proof['status'] == 'approved'
-                                          ? Colors.green.shade50
-                                          : Colors.red.shade50,
+                                      color: Colors.red.shade50,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: proof['status'] == 'approved'
-                                            ? Colors.green.shade200
-                                            : Colors.red.shade200,
+                                        color: Colors.red.shade300,
+                                        width: 2,
                                       ),
                                     ),
-                                    child: Text(
-                                      proof['reviewNotes'] ?? 'No review notes',
-                                      style: TextStyle(
-                                        color: proof['status'] == 'approved'
-                                            ? Colors.green.shade800
-                                            : Colors.red.shade800,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.cancel,
+                                          color: Colors.red.shade700,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Payment Rejected',
+                                                style: TextStyle(
+                                                  color: Colors.red.shade700,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              if (proof['reviewNotes'] != null && proof['reviewNotes'].isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  proof['reviewNotes'],
+                                                  style: TextStyle(
+                                                    color: Colors.red.shade600,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                               ],
@@ -352,13 +408,29 @@ class _PaymentProofsScreenState extends State<PaymentProofsScreen> {
     );
   }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return '';
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return '';
     try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      // Handle the new date object format from backend
+      if (dateValue is Map) {
+        // If it's an object with dateString, use that
+        if (dateValue['dateString'] != null) {
+          return dateValue['dateString'];
+        }
+        // If it has isoString, parse it
+        if (dateValue['isoString'] != null) {
+          final date = DateTime.parse(dateValue['isoString']);
+          return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+        }
+      }
+      // Fallback: if it's a string, parse it
+      if (dateValue is String) {
+        final date = DateTime.parse(dateValue);
+        return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+      }
+      return dateValue.toString();
     } catch (e) {
-      return dateString;
+      return dateValue.toString();
     }
   }
 }

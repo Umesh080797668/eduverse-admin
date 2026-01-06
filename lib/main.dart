@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'providers/auth_provider.dart';
 import 'providers/super_admin_provider.dart';
 import 'screens/splash_screen.dart';
@@ -14,7 +15,10 @@ import 'services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize notification service
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
+  // Initialize notification service with FCM
   await NotificationService().initialize();
   
   runApp(
