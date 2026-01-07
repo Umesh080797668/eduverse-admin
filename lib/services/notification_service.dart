@@ -2,6 +2,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
@@ -23,8 +27,16 @@ class NotificationService {
   bool _isInitialized = false;
   bool _notificationsEnabled = true;
   String? _fcmToken;
+  
+  // Navigation key to handle navigation from notifications
+  static GlobalKey<NavigatorState>? navigatorKey;
 
   String? get fcmToken => _fcmToken;
+  
+  /// Set the navigator key for navigation from notifications
+  static void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    navigatorKey = key;
+  }
 
   /// Initialize Firebase Cloud Messaging and Local Notifications
   Future<void> initialize() async {
@@ -35,7 +47,7 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
 
-      // Initialize local notifications
+      // Initialize local notifications - Android only
       const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
       const initSettings = InitializationSettings(android: androidSettings);
       
@@ -91,12 +103,18 @@ class NotificationService {
       // Get FCM token
       _fcmToken = await _firebaseMessaging.getToken();
       debugPrint('FCM Token: $_fcmToken');
+      
+      // Send token to server
+      if (_fcmToken != null) {
+        await _sendTokenToServer(_fcmToken!);
+      }
 
       // Listen for token refresh
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
         debugPrint('FCM Token refreshed: $newToken');
-        // TODO: Send token to server
+        // Send updated token to server if needed
+        _sendTokenToServer(newToken);
       });
 
       // Handle foreground messages
@@ -138,14 +156,50 @@ class NotificationService {
     debugPrint('Notification tapped: ${message.messageId}');
     debugPrint('Data: ${message.data}');
     
-    // TODO: Navigate to appropriate screen based on notification data
-    // You can use message.data to determine which screen to open
+    // Navigate to appropriate screen based on notification data
+    _navigateBasedOnData(message.data);
   }
 
   /// Handle local notification tap
   void _onNotificationTapped(NotificationResponse response) {
     debugPrint('Local notification tapped: ${response.payload}');
-    // TODO: Handle navigation based on payload
+    
+    // Parse payload and navigate
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      try {
+        final data = json.decode(response.payload!);
+        _navigateBasedOnData(data);
+      } catch (e) {
+        debugPrint('Error parsing notification payload: $e');
+      }
+    }
+  }
+  
+  /// Navigate to screen based on notification data
+  void _navigateBasedOnData(Map<String, dynamic> data) {
+    if (navigatorKey?.currentContext == null) {
+      debugPrint('Navigator context not available');
+      return;
+    }
+    
+    final type = data['type']?.toString() ?? '';
+    
+    switch (type) {
+      case 'problem_report':
+        navigatorKey!.currentState?.pushNamed('/problem-reports');
+        break;
+      case 'payment_proof':
+        navigatorKey!.currentState?.pushNamed('/payment-proofs');
+        break;
+      case 'feature_request':
+        navigatorKey!.currentState?.pushNamed('/problem-reports');
+        break;
+      case 'teacher':
+        navigatorKey!.currentState?.pushNamed('/teachers');
+        break;
+      default:
+        navigatorKey!.currentState?.pushNamed('/dashboard');
+    }
   }
 
   /// Show local notification
@@ -159,9 +213,11 @@ class NotificationService {
       'admin_channel',
       'Admin Notifications',
       channelDescription: 'Notifications for admin actions and updates',
-      importance: Importance.high,
+      importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
+      enableVibration: true,
+      playSound: true,
     );
 
     const notificationDetails = NotificationDetails(android: androidDetails);
@@ -173,6 +229,8 @@ class NotificationService {
       notificationDetails,
       payload: payload,
     );
+
+    debugPrint('Notification shown - ID: $id, Title: $title, Body: $body');
   }
 
   /// Show custom notification (for backward compatibility)
@@ -190,9 +248,70 @@ class NotificationService {
     await _showLocalNotification(
       title: title,
       body: body,
-      payload: data?.toString(),
+      payload: data != null ? json.encode(data) : null,
       id: id,
     );
+  }
+  
+  /// Public method to register FCM token with provided auth token
+  Future<void> registerFCMToken(String authToken) async {
+    try {
+      if (_fcmToken == null) {
+        debugPrint('No FCM token available');
+        return;
+      }
+      
+      await _sendTokenToServer(_fcmToken!, authToken);
+    } catch (e) {
+      debugPrint('Error registering FCM token: $e');
+    }
+  }
+
+  /// Send FCM token to server
+  Future<void> _sendTokenToServer(String token, [String? authToken]) async {
+    try {
+      final finalAuthToken = authToken ?? await _getAuthToken();
+      if (finalAuthToken == null) {
+        debugPrint('No auth token available, skipping FCM token registration');
+        return;
+      }
+      
+      final response = await http.post(
+        Uri.parse('${_getBaseUrl()}/api/super-admin/fcm-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $finalAuthToken',
+        },
+        body: json.encode({
+          'fcm_token': token,
+          'device_type': 'android',
+        }),
+      );
+      
+      if (response.statusCode == 200) {
+        debugPrint('FCM token successfully registered with server');
+      } else {
+        debugPrint('Failed to register FCM token. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error sending FCM token to server: $e');
+    }
+  }
+  
+  /// Get authentication token from secure storage
+  Future<String?> _getAuthToken() async {
+    try {
+      const storage = FlutterSecureStorage();
+      return await storage.read(key: 'token');
+    } catch (e) {
+      debugPrint('Error reading auth token: $e');
+      return null;
+    }
+  }
+  
+  /// Get base URL for API calls
+  String _getBaseUrl() {
+    return 'https://teacher-eight-chi.vercel.app';
   }
 
   /// Show problem report notification
@@ -205,7 +324,7 @@ class NotificationService {
     await showNotification(
       title: title,
       body: body,
-      id: 1,
+      id: 1001,
       data: {'type': 'problem_report', 'count': newReportsCount},
     );
   }
@@ -220,7 +339,7 @@ class NotificationService {
     await showNotification(
       title: title,
       body: body,
-      id: 2,
+      id: 1002,
       data: {'type': 'payment_proof', 'count': newProofsCount},
     );
   }
@@ -235,7 +354,7 @@ class NotificationService {
     await showNotification(
       title: title,
       body: body,
-      id: 3,
+      id: 1003,
       data: {'type': 'feature_request', 'count': newRequestsCount},
     );
   }

@@ -80,12 +80,14 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
       // Check if it's lifetime (expiry > 50 years from now) or time-limited
       final now = DateTime.now();
       final fiftyYearsFromNow = now.add(const Duration(days: 365 * 50));
-      if (widget.teacher.subscriptionExpiryDate.isAfter(fiftyYearsFromNow)) {
+      final expiryDate = widget.teacher.subscriptionExpiryDate;
+      
+      if (expiryDate != null && expiryDate.isAfter(fiftyYearsFromNow)) {
         isLifetime = true; // Lifetime free
-      } else {
+      } else if (expiryDate != null) {
         isLifetime = false; // Time-limited free
         // Calculate remaining days
-        final remainingDays = widget.teacher.subscriptionExpiryDate.difference(now).inDays;
+        final remainingDays = expiryDate.difference(now).inDays;
         freeDays = remainingDays > 0 ? remainingDays : 30; // Default to 30 if expired
       }
     }

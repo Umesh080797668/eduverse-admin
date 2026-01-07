@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   bool _isLoggedIn = false;
@@ -26,6 +27,10 @@ class AuthProvider with ChangeNotifier {
       print('DEBUG: AuthProvider - Admin email: ${data['user']?['email']}');
       _isLoggedIn = true;
       _startStatusChecking();
+      
+      // Register FCM token now that user is authenticated
+      await _registerFCMToken();
+      
       notifyListeners();
     } catch (e) {
       print('DEBUG: AuthProvider - Login failed: $e');
@@ -52,6 +57,9 @@ class AuthProvider with ChangeNotifier {
         _adminData = await ApiService.getAdminProfile();
         print('DEBUG: AuthProvider - Restored admin data: $_adminData');
         _startStatusChecking();
+        
+        // Register FCM token for restored session
+        await _registerFCMToken();
       } catch (e) {
         print('DEBUG: AuthProvider - Failed to fetch admin data: $e');
         // If we can't fetch admin data, consider the user not logged in
@@ -80,5 +88,18 @@ class AuthProvider with ChangeNotifier {
   void _stopStatusChecking() {
     _statusCheckTimer?.cancel();
     _statusCheckTimer = null;
+  }
+
+  /// Register FCM token with server after authentication
+  Future<void> _registerFCMToken() async {
+    try {
+      if (_isLoggedIn && _token != null) {
+        // Send FCM token to server using NotificationService
+        await NotificationService().registerFCMToken(_token!);
+      }
+    } catch (e) {
+      print('DEBUG: AuthProvider - FCM token registration failed: $e');
+      // Don't rethrow - this is not a critical error
+    }
   }
 }

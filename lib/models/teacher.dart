@@ -8,8 +8,8 @@ class Teacher {
   final String? profilePicture;
   final List<dynamic> companyIds;
   final String subscriptionType;
-  final DateTime subscriptionStartDate;
-  final DateTime subscriptionExpiryDate;
+  final DateTime? subscriptionStartDate;
+  final DateTime? subscriptionExpiryDate;
   final double totalEarnings;
   final int studentCount;
   final int classCount;
@@ -26,8 +26,8 @@ class Teacher {
     this.profilePicture,
     required this.companyIds,
     required this.subscriptionType,
-    required this.subscriptionStartDate,
-    required this.subscriptionExpiryDate,
+    this.subscriptionStartDate,
+    this.subscriptionExpiryDate,
     required this.totalEarnings,
     required this.studentCount,
     required this.classCount,
@@ -39,22 +39,26 @@ class Teacher {
 
   factory Teacher.fromJson(Map<String, dynamic> json) {
     return Teacher(
-      id: json['_id'],
-      teacherId: json['teacherId'],
-      name: json['name'],
-      email: json['email'],
-      phone: json['phone'],
-      status: json['status'],
-      profilePicture: json['profilePicture'],
+      id: json['_id'] as String,
+      teacherId: json['teacherId'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      phone: json['phone'] as String?,
+      status: json['status'] as String,
+      profilePicture: json['profilePicture'] as String?,
       companyIds: json['companyIds'] ?? [],
-      subscriptionType: json['subscriptionType'],
-      subscriptionStartDate: DateTime.parse(json['subscriptionStartDate']),
-      subscriptionExpiryDate: DateTime.parse(json['subscriptionExpiryDate']),
+      subscriptionType: json['subscriptionType'] as String,
+      subscriptionStartDate: json['subscriptionStartDate'] != null 
+          ? DateTime.parse(json['subscriptionStartDate'] as String)
+          : null,
+      subscriptionExpiryDate: json['subscriptionExpiryDate'] != null
+          ? DateTime.parse(json['subscriptionExpiryDate'] as String)
+          : null,
       totalEarnings: (json['totalEarnings'] ?? 0).toDouble(),
       studentCount: json['studentCount'] ?? 0,
       classCount: json['classCount'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 }
