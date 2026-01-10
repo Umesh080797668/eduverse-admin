@@ -49,3 +49,6 @@ android/app/google-services.json
 android/app/src/main/res/values/values.xml
 
 .env
+
+# Environment variables with secrets
+.env
