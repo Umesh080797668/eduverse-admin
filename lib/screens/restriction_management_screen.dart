@@ -118,6 +118,17 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
       }
 
       print('DEBUG: Calling restrictTeacher with teacherId: $teacherId, adminId: $adminId, reason: $reason');
+      
+      // Optimistically update UI before API call
+      final teacherIndex = _teachers.indexWhere((t) => t['_id'] == teacherId);
+      if (teacherIndex != -1) {
+        setState(() {
+          _teachers[teacherIndex]['isRestricted'] = true;
+          _teachers[teacherIndex]['restrictionReason'] = reason;
+          _teachers[teacherIndex]['restrictedAt'] = DateTime.now().toIso8601String();
+        });
+      }
+      
       await _restrictionService.restrictTeacher(
         teacherId: teacherId,
         adminId: adminId,
@@ -126,12 +137,11 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
 
       if (mounted) {
         _showSuccessDialog('Teacher restricted successfully');
-        // Add a small delay to ensure the database is updated
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _loadTeachers();
       }
     } catch (e) {
       print('DEBUG: Error restricting teacher: $e');
+      // Revert optimistic update on error
+      await _loadTeachers();
       if (mounted) {
         _showErrorDialog('Failed to restrict teacher: $e');
       }
@@ -143,13 +153,23 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
     if (!confirm) return;
 
     try {
+      // Optimistically update UI before API call
+      final teacherIndex = _teachers.indexWhere((t) => t['_id'] == teacherId);
+      if (teacherIndex != -1) {
+        setState(() {
+          _teachers[teacherIndex]['isRestricted'] = false;
+          _teachers[teacherIndex]['restrictionReason'] = null;
+          _teachers[teacherIndex]['restrictedAt'] = null;
+        });
+      }
+      
       await _restrictionService.unrestrictTeacher(teacherId);
       if (mounted) {
         _showSuccessDialog('Teacher unrestricted successfully');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _loadTeachers();
       }
     } catch (e) {
+      // Revert optimistic update on error
+      await _loadTeachers();
       if (mounted) {
         _showErrorDialog('Failed to unrestrict teacher: $e');
       }
@@ -169,6 +189,16 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
         return;
       }
 
+      // Optimistically update UI before API call
+      final studentIndex = _students.indexWhere((s) => s['_id'] == studentId);
+      if (studentIndex != -1) {
+        setState(() {
+          _students[studentIndex]['isRestricted'] = true;
+          _students[studentIndex]['restrictionReason'] = reason;
+          _students[studentIndex]['restrictedAt'] = DateTime.now().toIso8601String();
+        });
+      }
+      
       await _restrictionService.restrictStudent(
         studentId: studentId,
         adminId: adminId,
@@ -177,10 +207,10 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
 
       if (mounted) {
         _showSuccessDialog('Student restricted successfully');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _loadStudents();
       }
     } catch (e) {
+      // Revert optimistic update on error
+      await _loadStudents();
       if (mounted) {
         _showErrorDialog('Failed to restrict student: $e');
       }
@@ -192,13 +222,23 @@ class _RestrictionManagementScreenState extends State<RestrictionManagementScree
     if (!confirm) return;
 
     try {
+      // Optimistically update UI before API call
+      final studentIndex = _students.indexWhere((s) => s['_id'] == studentId);
+      if (studentIndex != -1) {
+        setState(() {
+          _students[studentIndex]['isRestricted'] = false;
+          _students[studentIndex]['restrictionReason'] = null;
+          _students[studentIndex]['restrictedAt'] = null;
+        });
+      }
+      
       await _restrictionService.unrestrictStudent(studentId);
       if (mounted) {
         _showSuccessDialog('Student unrestricted successfully');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _loadStudents();
       }
     } catch (e) {
+      // Revert optimistic update on error
+      await _loadStudents();
       if (mounted) {
         _showErrorDialog('Failed to unrestrict student: $e');
       }

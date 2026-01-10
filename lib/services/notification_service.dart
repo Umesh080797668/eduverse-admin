@@ -15,6 +15,43 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('Message notification: ${message.notification?.title}');
 }
 
+/// Enhanced Notification Channels
+final AndroidNotificationChannel criticalChannel = AndroidNotificationChannel(
+  'critical_channel',
+  'Critical Notifications',
+  description: 'Important alerts requiring immediate attention',
+  importance: Importance.max,
+  sound: RawResourceAndroidNotificationSound('critical_alert'),
+  enableVibration: true,
+  vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
+  ledColor: Colors.red,
+  enableLights: true,
+);
+
+final AndroidNotificationChannel successChannel = AndroidNotificationChannel(
+  'success_channel',
+  'Success Notifications',
+  description: 'Positive updates and confirmations',
+  importance: Importance.high,
+  sound: RawResourceAndroidNotificationSound('success_chime'),
+  enableVibration: true,
+  vibrationPattern: Int64List.fromList([0, 200, 100, 200]),
+  ledColor: Colors.green,
+  enableLights: true,
+);
+
+final AndroidNotificationChannel generalChannel = AndroidNotificationChannel(
+  'general_channel',
+  'General Notifications',
+  description: 'General app notifications and updates',
+  importance: Importance.defaultImportance,
+  sound: RawResourceAndroidNotificationSound('notification_default'),
+  enableVibration: true,
+  vibrationPattern: Int64List.fromList([0, 250, 250, 250]),
+  ledColor: Colors.blue,
+  enableLights: true,
+);
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -54,7 +91,11 @@ class NotificationService {
       await _localNotifications.initialize(
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
+        onDidReceiveBackgroundNotificationResponse: _onBackgroundAction,
       );
+
+      // Create notification channels
+      await _createNotificationChannels();
 
       // Request notification permissions
       if (_notificationsEnabled) {
@@ -68,6 +109,106 @@ class NotificationService {
       debugPrint('NotificationService initialized successfully');
     } catch (e) {
       debugPrint('Error initializing NotificationService: $e');
+    }
+  }
+
+  /// Create notification channels for Android
+  Future<void> _createNotificationChannels() async {
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      await androidPlugin.createNotificationChannel(criticalChannel);
+      await androidPlugin.createNotificationChannel(successChannel);
+      await androidPlugin.createNotificationChannel(generalChannel);
+      debugPrint('Notification channels created successfully');
+    }
+  }
+
+  /// Get notification details based on type
+  AndroidNotificationDetails getNotificationDetailsForType(String type) {
+    switch (type) {
+      case 'subscription_approved':
+      case 'subscription_activated':
+      case 'free_subscription_granted':
+        return getSuccessNotificationDetails();
+
+      case 'restriction':
+      case 'teacher_restricted':
+      case 'student_restricted':
+        return getCriticalNotificationDetails();
+
+      case 'payment_proof':
+      case 'problem_report':
+      case 'feature_request':
+        return getGeneralNotificationDetails();
+
+      default:
+        return getGeneralNotificationDetails();
+    }
+  }
+
+  /// Critical notifications (red theme)
+  AndroidNotificationDetails getCriticalNotificationDetails() {
+    return AndroidNotificationDetails(
+      criticalChannel.id,
+      criticalChannel.name,
+      channelDescription: criticalChannel.description,
+      importance: criticalChannel.importance,
+      color: Colors.red,
+      colorized: true,
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      styleInformation: const BigTextStyleInformation(''),
+      actions: [
+        const AndroidNotificationAction('view_details', 'View Details'),
+        const AndroidNotificationAction('dismiss', 'Dismiss'),
+      ],
+    );
+  }
+
+  /// Success notifications (green theme)
+  AndroidNotificationDetails getSuccessNotificationDetails() {
+    return AndroidNotificationDetails(
+      successChannel.id,
+      successChannel.name,
+      channelDescription: successChannel.description,
+      importance: successChannel.importance,
+      color: Colors.green,
+      colorized: true,
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      styleInformation: const BigTextStyleInformation(''),
+    );
+  }
+
+  /// General notifications (blue theme)
+  AndroidNotificationDetails getGeneralNotificationDetails() {
+    return AndroidNotificationDetails(
+      generalChannel.id,
+      generalChannel.name,
+      channelDescription: generalChannel.description,
+      importance: generalChannel.importance,
+      color: Colors.blue,
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      styleInformation: const BigTextStyleInformation(''),
+    );
+  }
+
+  /// Handle background notification actions
+  @pragma('vm:entry-point')
+  static void _onBackgroundAction(NotificationResponse response) async {
+    debugPrint('Background action received: ${response.actionId}');
+    
+    switch (response.actionId) {
+      case 'view_details':
+        // Handle view details action
+        debugPrint('View details action triggered');
+        break;
+      case 'dismiss':
+        // Handle dismiss action
+        debugPrint('Dismiss action triggered');
+        break;
+      default:
+        debugPrint('Unknown action: ${response.actionId}');
     }
   }
 
@@ -143,10 +284,15 @@ class NotificationService {
     final data = message.data;
 
     if (notification != null) {
-      await _showLocalNotification(
-        title: notification.title ?? 'Notification',
-        body: notification.body ?? '',
-        payload: data.toString(),
+      final type = data['type'] as String? ?? 'general';
+      final androidDetails = getNotificationDetailsForType(type);
+
+      await _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notification.title ?? 'Notification',
+        notification.body ?? '',
+        NotificationDetails(android: androidDetails),
+        payload: json.encode(data),
       );
     }
   }
@@ -208,19 +354,10 @@ class NotificationService {
     required String body,
     String? payload,
     int id = 0,
+    String type = 'general',
   }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'admin_channel',
-      'Admin Notifications',
-      channelDescription: 'Notifications for admin actions and updates',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-      enableVibration: true,
-      playSound: true,
-    );
-
-    const notificationDetails = NotificationDetails(android: androidDetails);
+    final androidDetails = getNotificationDetailsForType(type);
+    final notificationDetails = NotificationDetails(android: androidDetails);
 
     await _localNotifications.show(
       id,
@@ -230,7 +367,7 @@ class NotificationService {
       payload: payload,
     );
 
-    debugPrint('Notification shown - ID: $id, Title: $title, Body: $body');
+    debugPrint('Notification shown - ID: $id, Title: $title, Body: $body, Type: $type');
   }
 
   /// Show custom notification (for backward compatibility)
@@ -250,6 +387,67 @@ class NotificationService {
       body: body,
       payload: data != null ? json.encode(data) : null,
       id: id,
+      type: data?['type'] as String? ?? 'general',
+    );
+  }
+
+  /// Show smart notification with enhanced features
+  Future<void> showSmartNotification({
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+    String? imageUrl,
+    List<String>? inboxLines,
+  }) async {
+    if (!_notificationsEnabled) return;
+
+    final type = data['type'] as String? ?? 'general';
+    AndroidNotificationDetails androidDetails = getNotificationDetailsForType(type);
+
+    // Add image if provided
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      androidDetails = AndroidNotificationDetails(
+        androidDetails.channelId,
+        androidDetails.channelName,
+        channelDescription: androidDetails.channelDescription,
+        importance: androidDetails.importance,
+        priority: androidDetails.priority,
+        color: androidDetails.color,
+        colorized: androidDetails.colorized,
+        largeIcon: androidDetails.largeIcon,
+        styleInformation: BigPictureStyleInformation(
+          FilePathAndroidBitmap(imageUrl),
+          contentTitle: title,
+          summaryText: body,
+        ),
+      );
+    }
+
+    // Add inbox style if multiple lines provided
+    if (inboxLines != null && inboxLines.isNotEmpty) {
+      androidDetails = AndroidNotificationDetails(
+        androidDetails.channelId,
+        androidDetails.channelName,
+        channelDescription: androidDetails.channelDescription,
+        importance: androidDetails.importance,
+        priority: androidDetails.priority,
+        color: androidDetails.color,
+        colorized: androidDetails.colorized,
+        largeIcon: androidDetails.largeIcon,
+        styleInformation: InboxStyleInformation(
+          inboxLines,
+          contentTitle: title,
+          summaryText: '${inboxLines.length} new items',
+        ),
+      );
+    }
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      NotificationDetails(android: androidDetails),
+      payload: json.encode(data),
     );
   }
   
