@@ -15,6 +15,8 @@ class Teacher {
   final int classCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isCustomPlan;
+  final List<String> allowedFeatures;
 
   Teacher({
     required this.id,
@@ -33,6 +35,8 @@ class Teacher {
     required this.classCount,
     required this.createdAt,
     required this.updatedAt,
+    this.isCustomPlan = false,
+    this.allowedFeatures = const [],
   });
 
   bool get isActive => status == 'active';
@@ -59,6 +63,8 @@ class Teacher {
       classCount: json['classCount'] ?? 0,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      isCustomPlan: json['isCustomPlan'] ?? false,
+      allowedFeatures: (json['allowedFeatures'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 }

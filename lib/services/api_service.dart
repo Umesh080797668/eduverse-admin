@@ -171,6 +171,24 @@ class ApiService {
     }
   }
 
+  static Future<void> updateTeacherFeatures(String teacherId, bool isCustomPlan, List<String> allowedFeatures) async {
+    final token = await getToken();
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/super-admin/teachers/$teacherId/features'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json'
+      },
+      body: jsonEncode({
+        'isCustomPlan': isCustomPlan,
+        'allowedFeatures': allowedFeatures,
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update teacher features');
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getMonthlyEarningsForTeacher(String teacherId) async {
     final token = await getToken();
     final response = await http.get(

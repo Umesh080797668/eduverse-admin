@@ -391,4 +391,23 @@ class SuperAdminProvider with ChangeNotifier {
     }
     notifyListeners();
   }
+  Future<void> updateTeacherFeatures(String teacherId, bool isCustomPlan, List<String> allowedFeatures) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await ApiService.updateTeacherFeatures(teacherId, isCustomPlan, allowedFeatures);
+
+      await loadTeachers();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    } finally {
+      if (_isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
 }

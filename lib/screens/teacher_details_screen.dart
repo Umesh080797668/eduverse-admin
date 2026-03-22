@@ -18,10 +18,14 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _monthlyEarnings = [];
   bool _earningsLoading = false;
+  bool _isCustomPlan = false;
+  List<String> _allowedFeatures = [];
 
   @override
   void initState() {
     super.initState();
+    _isCustomPlan = widget.teacher.isCustomPlan;
+    _allowedFeatures = List.from(widget.teacher.allowedFeatures);
     _loadData();
     _loadMonthlyEarnings();
   }
@@ -437,7 +441,10 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                   ),
 
                   const SizedBox(height: 24),
+                    // Features & Permissions Custom Plan Override
+                    _buildFeaturesCard(context),
 
+                    const SizedBox(height: 24),
                   // Earnings Information Section
                   Card(
                     elevation: 4,
@@ -751,6 +758,81 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                   );
                 }).toList(),
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildFeaturesCard(BuildContext context) {
+    final availableFeatures = [
+      {'key': 'lms', 'label': 'LMS (Videos & Quizzes)'},
+      {'key': 'reports', 'label': 'Advanced Reports'},
+      {'key': 'whatsapp', 'label': 'WhatsApp Integration'},
+      {'key': 'at_risk', 'label': 'At-Risk Analytics'},
+      {'key': 'offline', 'label': 'Offline Mode'}
+    ];
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Features & Permissions',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Switch(
+                  value: _isCustomPlan,
+                  onChanged: (val) async {
+                    setState(() {
+                      _isCustomPlan = val;
+                    });
+                    await context.read<SuperAdminProvider>().updateTeacherFeatures(
+                      widget.teacher.id,
+                      _isCustomPlan,
+                      _allowedFeatures,
+                    );
+                  },
+                ),
+              ],
+            ),
+            if (_isCustomPlan) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Custom Plan Overrides:',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              ...availableFeatures.map((f) {
+                return CheckboxListTile(
+                  title: Text(f['label']!),
+                  value: _allowedFeatures.contains(f['key']),
+                  onChanged: (val) async {
+                    setState(() {
+                      if (val == true) {
+                        _allowedFeatures.add(f['key']!);
+                      } else {
+                        _allowedFeatures.remove(f['key']);
+                      }
+                    });
+                    await context.read<SuperAdminProvider>().updateTeacherFeatures(
+                      widget.teacher.id,
+                      _isCustomPlan,
+                      _allowedFeatures,
+                    );
+                  },
+                );
+              }),
             ],
           ],
         ),
